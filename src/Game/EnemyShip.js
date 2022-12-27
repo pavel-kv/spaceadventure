@@ -2,7 +2,7 @@ import { randomInt, randomFloat } from "./functions.js";
 import {
 	COLLISION_FLAG,
 	MUTUAL_COLLISION_FLAG,
-	GAME_ASSETS, 
+	GAME_ASSETS,
 	MOVEMENT,
 	GAME_OPTIONS,
 } from "./settings.js";
@@ -34,9 +34,9 @@ class EnemyShip extends Entity {
 		this.deviationY = options.deviationY ?? 0;
 		this.deviationSpeedY = options.deviationSpeedY ?? 2;
 		this.typeMovement = options.typeMovement ?? "random";
-
 	}
 
+	// движение объекта
 	move(coeff = 1, steps = 0) {
 
 		this.update(coeff);
@@ -61,11 +61,13 @@ class EnemyShip extends Entity {
 				break;
 		}
 
+		// случайный выстрел
 		if (Math.random() < this.fireChance) {
 			this.fire();
 		}
 	}
 
+	// движение восьмёркой
 	figureEightMovement() {
 		if (this.isLeftTouch(this.mapWidth - this.deviationX)) {
 
@@ -124,7 +126,8 @@ class EnemyShip extends Entity {
 			}
 		}
 	}
-
+	
+	// движение по часовой стрелке
 	clockwiseMovement() {
 		if (this.isRightTouch(this.deviationX)) {
 			if (this.countMovements === 0) {
@@ -169,6 +172,7 @@ class EnemyShip extends Entity {
 		}
 	}
 
+	// движение против часовой стрелки
 	counterclockwiseMovement() {
 		if (this.isLeftTouch(this.deviationX)) {
 			if (this.countMovements === 0) {
@@ -213,6 +217,7 @@ class EnemyShip extends Entity {
 		}
 	}
 
+	// случайное движение
 	moveRandom(steps = 0) {
 		if (!this.inGame) {
 			this.reboundEdgeX();
@@ -226,11 +231,12 @@ class EnemyShip extends Entity {
 			this.randomizeSpeed(steps);
 		}
 		if (steps && !(steps % randomInt(RAND_TIME_MIN, RAND_TIME_MAX))) {
-			this.changeSpeed();
+			this.speedY = this.speedY * randomFloat(0.8, 1.2);
 			this.fireChance += 0.0005;
 		}
 	}
 
+	// случайное изменение скорости
 	randomizeSpeed() {
 		this.speedX = randomFloat(this.speedX * SPEED_VAR_MIN, this.speedX * SPEED_VAR_MAX);
 		if (this.speedX > -SPEED_MIN_X && this.speedX < 0) {
@@ -262,10 +268,7 @@ class EnemyShip extends Entity {
 		}
 	}
 
-	changeSpeed() {
-		this.speedY = this.speedY * randomFloat(0.8, 1.2);
-	}
-
+	// отправка сообщения для добавления выстрела
 	fire() {
 		if (!this.inGame) {
 			return;

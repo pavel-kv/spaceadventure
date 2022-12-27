@@ -133,7 +133,6 @@ class Entity {
 		return false;
 	}
 
-
 	// Проверка на столкновение c другим объектом
 	isCollision(obj) {
 		if (Math.abs(this.centerX - obj.centerX) > (this.halfWidth + obj.halfWidth)) {

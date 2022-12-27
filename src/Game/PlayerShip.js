@@ -130,6 +130,9 @@ class PlayerShip extends Entity {
 			this.posY = mouse.y - this.offsetMouseY;
 			this.centerX = this.posX + this.halfWidth;
 			this.centerY = this.posY + this.halfHeight;
+			if (this.health > 0) {
+				this.fire();
+			}
 		}
 
 		if (mouse.state === "click" && this.health > 0 && !this.mouseLock) {

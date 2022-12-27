@@ -2,7 +2,7 @@ import { randomInt, randomFloat } from "./functions.js";
 import {
 	COLLISION_FLAG,
 	MUTUAL_COLLISION_FLAG,
-	GAME_ASSETS, 
+	GAME_ASSETS,
 	MOVEMENT,
 	GAME_OPTIONS,
 } from "./settings.js";
@@ -18,7 +18,7 @@ import FireShot from "./FireShot.js";
 import Bonus from "./Bonus.js";
 import Stars from "./Stars.js";
 
-// управление игровыми объектами
+// создание игровых объектов и управление ими
 class Game {
 	constructor(bufferCtx) {
 		this.bufferCtx = bufferCtx;
@@ -55,7 +55,6 @@ class Game {
 		this.fireChanceEnemy = GAME_OPTIONS.enemyShip.fireCnance;
 		this.fireChanceBoss = GAME_OPTIONS.bossEnemy.fireCnance;
 
-
 		this.entityInGame = {
 			playerShip: 0,
 			enemyShip: 0,
@@ -68,6 +67,7 @@ class Game {
 			totalDestr: 0,
 			enemysDestr: 0,
 			asteroidsDestr: 0,
+			bossDestr: 0,
 			health: 0,
 			lives: 0,
 			shots: 0,
@@ -77,7 +77,6 @@ class Game {
 			hearts: 0,
 		}
 
-		this.allResourcesLoaded = false;
 		this.arrayOfPromise = [];
 
 		this.maxEnemyShipsInGame = 5;
@@ -88,7 +87,6 @@ class Game {
 
 		this.loadGameResources();
 	}
-
 
 	//загрузка ресурсов
 	loadGameResources() {
@@ -143,16 +141,18 @@ class Game {
 		});
 	}
 
+	// слушатель на окончание воспроизведения музыки
+	// для включения следующего трека
 	addMusicEventListener() {
 		this.music.addEventListener("pause", (event) => {
 			this.playMusic(GAME_ASSETS.music[`music${randomInt(1, 4)}`])
 		});
 	}
 
+	// запуск игры
 	startGame() {
 		return new Promise((resolve, reject) => {
 			Promise.all(this.arrayOfPromise).then((result) => {
-				this.allResourcesLoaded = true;
 				this.playMusic(GAME_ASSETS.music[`music${randomInt(1, 4)}`]);
 				this.addMusicEventListener();
 				resolve(true);
@@ -160,6 +160,7 @@ class Game {
 		});
 	}
 
+	// при окончании игры включение трека окончания игры
 	stopGame() {
 		if (!this.isMusicGameoverPlayed) {
 			this.isMusicGameoverPlayed = true;
@@ -168,6 +169,7 @@ class Game {
 		this.isStopGame = true;
 	}
 
+	// вывод надписи GameOver при завершении игры
 	printGameOver() {
 		this.bufferCtx.drawImage(
 			this.sprites["gameover"].image, 0, 0,
@@ -180,6 +182,8 @@ class Game {
 		);
 	}
 
+	// выключение и включение аудиоэффектов и музыки
+	// установка уровня звуков и музыки
 	muteAudioEffects() {
 		this.isMuteAudioEffects = true;
 	}
@@ -220,6 +224,7 @@ class Game {
 		}
 	}
 
+	// проигрывание музыки
 	playMusic(source) {
 		if (!this.isMuteMusic && !this.isStopGame) {
 			this.music.src = "";
@@ -231,6 +236,7 @@ class Game {
 		}
 	}
 
+	// проигрывание звукового эффекта при игровом событии
 	playAudioEffect(source) {
 		if (!this.isMuteAudioEffects && this.audio[source]) {
 			const audio = this.audio[source].cloneNode(false);
@@ -240,12 +246,14 @@ class Game {
 		}
 	}
 
+	// изменение размеров игрового поля
 	resize(size) {
 		this.size.width = size.width;
 		this.isResize = true;
 		this.size = size;
 	}
 
+	// изменение размеров игровых объектов
 	resizeEntity() {
 		if (!this.size) {
 			return;
@@ -257,6 +265,7 @@ class Game {
 		}
 	}
 
+	// изменение размеров фона
 	resizeBackgroundImage() {
 		if (!this.size) {
 			return;
@@ -268,6 +277,7 @@ class Game {
 		}
 	}
 
+	// подсчёт очков игрока
 	updateScores(message) {
 		switch (message.code) {
 			case "Fire":
@@ -299,6 +309,7 @@ class Game {
 				break;
 			case "bossEnemyDestroyed":
 				if (message.target.id === "playerShipFire") {
+					this.gameScore.bossDestr++;
 					this.gameScore.enemysDestr++;
 					this.gameScore.totalDestr++;
 					this.gameScore.score += GAME_OPTIONS[message.id].score;
@@ -330,6 +341,7 @@ class Game {
 		return this.gameScore;
 	}
 
+	// метод обратного вызова при изменении состояния кнопок клавиатуры
 	changeKeyState(action) {
 		this.pressedKeys = action.keys;
 	}
@@ -376,7 +388,7 @@ class Game {
 		const newEntityList = [];
 
 		this.addRandomAsteroids(steps);
-		this.managerEnemys(steps);
+		this.managingAdditionEnemies(steps);
 
 		for (let entity of this.entityList) {
 			// если объект не помечен для удаления из игры,
@@ -473,145 +485,9 @@ class Game {
 		}
 	}
 
-	addRandomEnemyShips() {
-
-		this.enemyShipSprite = `enemyShip${randomInt(1, GAME_ASSETS.enemyShips)}`;
-		const options = {
-			posX: randomInt(100, this.size.width - 200),
-			posY: randomInt(-300, -100),
-			speedX: randomFloat(-MOVEMENT[this.currentPattern].deviationSpeedX, MOVEMENT[this.currentPattern].deviationSpeedX),
-			speedY: randomFloat(0.5, MOVEMENT[this.currentPattern].deviationSpeedY),
-			typeMovement: MOVEMENT[this.currentPattern].pattern,
-		};
-		this.addEntity(this.createEnemyShip(options));
-	}
-
-	addRandomAsteroids(steps) {
-		if (!(steps % 1511)) {
-			this.maxAsteroidsInGame++;
-		}
-		if (!(steps % 97)) {
-
-			if (this.entityInGame.asteroid < this.maxAsteroidsInGame) {
-				for (let i = 0; i < GAME_OPTIONS.startPos.asteroid.maxCount; i++) {
-					if (Math.random() > 0.5) {
-						this.addEntity(this.createAsteroid());
-					}
-				}
-			}
-		}
-	}
-
-	addEnemyShip(message) {
-		if (this.addedEnemys >= MOVEMENT[this.currentPattern].enemyMax + this.round * MOVEMENT.increaseEnemys) {
-			return;
-		}
-		const options = {};
-		switch (message.typeMovement) {
-			case MOVEMENT[1].pattern:
-			case MOVEMENT[3].pattern:
-			case MOVEMENT[5].pattern:
-				options.posY = message.posY;
-				options.speedX = message.speedX;
-				options.speedY = 0;
-				options.typeMovement = MOVEMENT[this.currentPattern].pattern;
-				if (message.speedX < 0) {
-					options.posX = this.size.width;
-				} else {
-					options.posX = -message.width;
-				}
-				this.addEntity(this.createEnemyShip(options));
-				this.addedEnemys++;
-				break;
-			case MOVEMENT[2].pattern:
-				this.addEnemyRectMovement("clockwise");
-				this.addedEnemys++;
-				break;
-			case MOVEMENT[4].pattern:
-				this.addEnemyRectMovement("counterclockwise");
-				this.addedEnemys++;
-				break;
-			case MOVEMENT[6].pattern:
-				this.addEnemyFigureEightMovement();
-				this.addedEnemys++;
-				break;
-			case MOVEMENT[8].pattern:
-				this.addRandomEnemyShips();
-				this.addedEnemys++;
-				break;
-		}
-	}
-
-	addEnemyBackAndForthMovement(lines) {
-		const options = {
-			speedY: 0,
-			typeMovement: MOVEMENT[this.currentPattern].pattern,
-		};
-
-		options.posY = lines * MOVEMENT[this.currentPattern].posY + 20;
-		if (lines % 2) {
-			options.posX = -MOVEMENT[this.currentPattern].posX;
-			options.speedX = MOVEMENT[this.currentPattern].speedX + MOVEMENT.increaseSpeed * this.round;
-		} else {
-			options.posX = this.size.width + MOVEMENT[this.currentPattern].posX;
-			options.speedX = -(MOVEMENT[this.currentPattern].speedX + MOVEMENT.increaseSpeed * this.round);
-		}
-		this.addEntity(this.createEnemyShip(options));
-	}
-
-	addEnemyFigureEightMovement() {
-		const options = {
-			posX: this.size.width,
-			posY: MOVEMENT[this.currentPattern].posY,
-			speedX: MOVEMENT[this.currentPattern].speedX - MOVEMENT.increaseSpeed * this.round,
-			speedY: MOVEMENT[this.currentPattern].speedY,
-			deviationX: MOVEMENT[this.currentPattern].deviationX,
-			deviationY: MOVEMENT[this.currentPattern].deviationY,
-			deviationSpeedY: MOVEMENT[this.currentPattern].deviationSpeedY + MOVEMENT.increaseSpeed * this.round,
-			typeMovement: MOVEMENT[this.currentPattern].pattern,
-		};
-		this.addEntity(this.createEnemyShip(options));
-	}
-
-
-	addEnemyRectMovement(direction = "counterclockwise") {
-		const options = {
-			speedY: MOVEMENT[this.currentPattern].speedY,
-			posY: MOVEMENT[this.currentPattern].posY,
-			deviationX: MOVEMENT[this.currentPattern].deviationX,
-			deviationY: MOVEMENT[this.currentPattern].deviationY,
-			deviationSpeedY: MOVEMENT[this.currentPattern].deviationSpeedY + MOVEMENT.increaseSpeed * this.round,
-			typeMovement: MOVEMENT[this.currentPattern].pattern,
-		};
-
-		if (direction === "clockwise") {
-			options.posX = -MOVEMENT[this.currentPattern].posX;
-			options.speedX = MOVEMENT[this.currentPattern].speedX + MOVEMENT.increaseSpeed * this.round;
-		} else {
-			options.posX = this.size.width + MOVEMENT[this.currentPattern].posX;
-			options.speedX = MOVEMENT[this.currentPattern].speedX - MOVEMENT.increaseSpeed * this.round;
-		}
-		this.addEntity(this.createEnemyShip(options));
-	}
-
-	addBossEnemyMovement() {
-		const options = {
-			posX: this.size.width / 2,
-			posY: MOVEMENT[this.currentPattern].posY,
-			speedX: MOVEMENT[this.currentPattern].speedX,
-			speedY: MOVEMENT[this.currentPattern].speedY,
-			deviationX: MOVEMENT[this.currentPattern].deviationX,
-			deviationY: MOVEMENT[this.currentPattern].deviationY,
-			deviationSpeedY: MOVEMENT[this.currentPattern].deviationSpeedY,
-			deviationSpeedX: MOVEMENT[this.currentPattern].deviationSpeedX,
-			typeMovement: MOVEMENT[this.currentPattern].pattern,
-		};
-		this.addEntity(this.createBossEnemy(options));
-	}
-
-
-	managerEnemys(steps) {
-		if (!(steps % (90 + this.round * 4))
+	// управление добавлением кораблей проитвника в игру
+	managingAdditionEnemies(steps) {
+		if (!(steps % (107 + this.round * 5))
 			&& this.countAddedEnemy < MOVEMENT[this.currentPattern].enemyStart) {
 
 			switch (this.currentPattern) {
@@ -661,6 +537,150 @@ class Game {
 		}
 	}
 
+	// добавление корабля противника для движения по заданному паттерну
+	addEnemyShip(message) {
+		if (this.addedEnemys >= MOVEMENT[this.currentPattern].enemyMax + this.round * MOVEMENT.increaseEnemys) {
+			return;
+		}
+		const options = {};
+		switch (message.typeMovement) {
+			case MOVEMENT[1].pattern:
+			case MOVEMENT[3].pattern:
+			case MOVEMENT[5].pattern:
+				options.posY = message.posY;
+				options.speedX = message.speedX;
+				options.speedY = 0;
+				options.typeMovement = MOVEMENT[this.currentPattern].pattern;
+				if (message.speedX < 0) {
+					options.posX = this.size.width;
+				} else {
+					options.posX = -message.width;
+				}
+				this.addEntity(this.createEnemyShip(options));
+				this.addedEnemys++;
+				break;
+			case MOVEMENT[2].pattern:
+				this.addEnemyRectMovement("clockwise");
+				this.addedEnemys++;
+				break;
+			case MOVEMENT[4].pattern:
+				this.addEnemyRectMovement("counterclockwise");
+				this.addedEnemys++;
+				break;
+			case MOVEMENT[6].pattern:
+				this.addEnemyFigureEightMovement();
+				this.addedEnemys++;
+				break;
+			case MOVEMENT[8].pattern:
+				this.addRandomEnemyShips();
+				this.addedEnemys++;
+				break;
+		}
+	}
+
+	// добавление корабля противника в случайном порядке
+	addRandomEnemyShips() {
+		this.enemyShipSprite = `enemyShip${randomInt(1, GAME_ASSETS.enemyShips)}`;
+		const options = {
+			posX: randomInt(100, this.size.width - 200),
+			posY: randomInt(-300, -100),
+			speedX: randomFloat(-MOVEMENT[this.currentPattern].deviationSpeedX, MOVEMENT[this.currentPattern].deviationSpeedX),
+			speedY: randomFloat(0.5, MOVEMENT[this.currentPattern].deviationSpeedY),
+			typeMovement: MOVEMENT[this.currentPattern].pattern,
+		};
+		this.addEntity(this.createEnemyShip(options));
+	}
+
+	// добавление астероидов
+	addRandomAsteroids(steps) {
+		if (!(steps % 1511)) {
+			this.maxAsteroidsInGame++;
+		}
+		if (!(steps % 97)) {
+
+			if (this.entityInGame.asteroid < this.maxAsteroidsInGame) {
+				for (let i = 0; i < GAME_OPTIONS.startPos.asteroid.maxCount; i++) {
+					if (Math.random() > 0.5) {
+						this.addEntity(this.createAsteroid());
+					}
+				}
+			}
+		}
+	}
+
+	// создание и добавление корабля противника 
+	// с движением вперёд и назад по горизонтали
+	addEnemyBackAndForthMovement(lines) {
+		const options = {
+			speedY: 0,
+			typeMovement: MOVEMENT[this.currentPattern].pattern,
+		};
+
+		options.posY = lines * MOVEMENT[this.currentPattern].posY + 20;
+		if (lines % 2) {
+			options.posX = -MOVEMENT[this.currentPattern].posX;
+			options.speedX = MOVEMENT[this.currentPattern].speedX + MOVEMENT.increaseSpeed * this.round;
+		} else {
+			options.posX = this.size.width + MOVEMENT[this.currentPattern].posX;
+			options.speedX = -(MOVEMENT[this.currentPattern].speedX + MOVEMENT.increaseSpeed * this.round);
+		}
+		this.addEntity(this.createEnemyShip(options));
+	}
+
+	// создание и добавление корабля противника 
+	// с движением восьмёркой
+	addEnemyFigureEightMovement() {
+		const options = {
+			posX: this.size.width,
+			posY: MOVEMENT[this.currentPattern].posY,
+			speedX: MOVEMENT[this.currentPattern].speedX - MOVEMENT.increaseSpeed * this.round,
+			speedY: MOVEMENT[this.currentPattern].speedY,
+			deviationX: MOVEMENT[this.currentPattern].deviationX,
+			deviationY: MOVEMENT[this.currentPattern].deviationY,
+			deviationSpeedY: MOVEMENT[this.currentPattern].deviationSpeedY + MOVEMENT.increaseSpeed * this.round,
+			typeMovement: MOVEMENT[this.currentPattern].pattern,
+		};
+		this.addEntity(this.createEnemyShip(options));
+	}
+
+	// создание и добавление корабля противника 
+	// с движением по или против часовой стрелке
+	addEnemyRectMovement(direction = "counterclockwise") {
+		const options = {
+			speedY: MOVEMENT[this.currentPattern].speedY,
+			posY: MOVEMENT[this.currentPattern].posY,
+			deviationX: MOVEMENT[this.currentPattern].deviationX,
+			deviationY: MOVEMENT[this.currentPattern].deviationY,
+			deviationSpeedY: MOVEMENT[this.currentPattern].deviationSpeedY + MOVEMENT.increaseSpeed * this.round,
+			typeMovement: MOVEMENT[this.currentPattern].pattern,
+		};
+
+		if (direction === "clockwise") {
+			options.posX = -MOVEMENT[this.currentPattern].posX;
+			options.speedX = MOVEMENT[this.currentPattern].speedX + MOVEMENT.increaseSpeed * this.round;
+		} else {
+			options.posX = this.size.width + MOVEMENT[this.currentPattern].posX;
+			options.speedX = MOVEMENT[this.currentPattern].speedX - MOVEMENT.increaseSpeed * this.round;
+		}
+		this.addEntity(this.createEnemyShip(options));
+	}
+
+	// создание и добавление босса противника 
+	addBossEnemyMovement() {
+		const options = {
+			posX: this.size.width / 2,
+			posY: MOVEMENT[this.currentPattern].posY,
+			speedX: MOVEMENT[this.currentPattern].speedX,
+			speedY: MOVEMENT[this.currentPattern].speedY,
+			deviationX: MOVEMENT[this.currentPattern].deviationX,
+			deviationY: MOVEMENT[this.currentPattern].deviationY,
+			deviationSpeedY: MOVEMENT[this.currentPattern].deviationSpeedY,
+			deviationSpeedX: MOVEMENT[this.currentPattern].deviationSpeedX,
+			typeMovement: MOVEMENT[this.currentPattern].pattern,
+		};
+		this.addEntity(this.createBossEnemy(options));
+	}
+
 	//создание корабля игрока
 	createPlayerShip() {
 		this.gameScore.health = GAME_OPTIONS.playerShip.health;
@@ -684,7 +704,6 @@ class Game {
 			inGame: true,
 		});
 	}
-
 
 	//создание корабля противника
 	createEnemyShip(options) {
@@ -800,7 +819,6 @@ class Game {
 		for (let i = 0; i < times; i++) {
 
 			const fireSprite = new Sprite(this.sprites[param.spriteFire]);
-
 			const positionX = param.code === "playerShip"
 				? param.posY + i * fireSprite.height
 				: param.posY + param.height - fireSprite.height + i * fireSprite.height;
@@ -817,7 +835,6 @@ class Game {
 				collisionFlag: COLLISION_FLAG[param.id + param.code],
 				mutualCollisionFlag: MUTUAL_COLLISION_FLAG[param.id + param.code],
 			}
-
 			this.addEntity(new FireShot(fireOptions));
 		}
 		this.playAudioEffect(param.id + param.code);
@@ -841,7 +858,6 @@ class Game {
 			}
 
 			const fireSprite = new Sprite(this.sprites[param.spriteFire]);
-
 			const fireOptions = {
 				ctx: this.bufferCtx,
 				sprite: fireSprite,
@@ -854,7 +870,6 @@ class Game {
 				collisionFlag: COLLISION_FLAG[param.id + param.code],
 				mutualCollisionFlag: MUTUAL_COLLISION_FLAG[param.id + param.code],
 			}
-
 			this.addEntity(new FireShot(fireOptions));
 		}
 	}
@@ -866,7 +881,6 @@ class Game {
 		spriteOptions.width = (param.height > param.width ? param.height : param.width) * 1.5;
 		spriteOptions.height = (param.height > param.width ? param.height : param.width) * 1.5;
 		const explosionSprite = new Sprite(spriteOptions);
-
 		const explosionOptions = {
 			ctx: this.bufferCtx,
 			sprite: explosionSprite,
@@ -879,9 +893,7 @@ class Game {
 			collisionFlag: 0,
 			mutualCollisionFlag: 0,
 		}
-
 		this.addEntity(new AnimationEffects(explosionOptions));
-
 		this.playAudioEffect("explosionShip");
 	}
 
@@ -911,12 +923,9 @@ class Game {
 		});
 	}
 
-
 	// бонус - монеты (дополнительные очки)
 	addCoin(param) {
-
 		const coinSprite = new Sprite(this.sprites.coin);
-
 		const coinOptions = {
 			ctx: this.bufferCtx,
 			sprite: coinSprite,
@@ -930,14 +939,12 @@ class Game {
 			collisionFlag: COLLISION_FLAG.bonus,
 			mutualCollisionFlag: MUTUAL_COLLISION_FLAG.bonus,
 		}
-
 		this.addEntity(new Bonus(coinOptions));
 	}
 
 	// бонус - дополнительная жизнь
 	addHeart(param) {
 		const heartSprite = new Sprite(this.sprites.heart);
-
 		const heartOptions = {
 			ctx: this.bufferCtx,
 			sprite: heartSprite,
@@ -952,21 +959,15 @@ class Game {
 			collisionFlag: COLLISION_FLAG.bonus,
 			mutualCollisionFlag: MUTUAL_COLLISION_FLAG.bonus,
 		}
-
 		this.addEntity(new Bonus(heartOptions));
 	}
 
-
 	// взрыв астероида
 	addExplosionAsteroid(param) {
-
 		const SpriteOptions = this.sprites["explosionAsteroid"];
-
 		SpriteOptions.width = (param.height > param.width ? param.height : param.width) * 2;
 		SpriteOptions.height = (param.height > param.width ? param.height : param.width) * 2;
-
 		const explosionAsteroidSprite = new Sprite(SpriteOptions);
-
 		const explosionOptions = {
 			ctx: this.bufferCtx,
 			sprite: explosionAsteroidSprite,
@@ -979,14 +980,12 @@ class Game {
 			collisionFlag: 0,
 			mutualCollisionFlag: 0,
 		}
-
 		this.addEntity(new AnimationEffects(explosionOptions));
 	}
 
 	// взрыв выстрела при попадании по противнику
 	addExplosionFireShot(param) {
 		const explosionFireShotSprite = new Sprite(this.sprites[param.explosion]);
-
 		const explosioBlueLaserShot = {
 			ctx: this.bufferCtx,
 			sprite: explosionFireShotSprite,
@@ -998,10 +997,8 @@ class Game {
 			collisionFlag: 0,
 			mutualCollisionFlag: 0,
 		}
-
 		this.addEntity(new AnimationEffects(explosioBlueLaserShot));
 	}
-
 
 	// обратный вызов для приёма сообщений от игровых объектов
 	eventsCallback(message) {
@@ -1037,7 +1034,7 @@ class Game {
 				this.updateScores(message);
 				if (message.isBonus) {
 					if (this.gameScore.lives < this.maxLives) {
-						if (Math.random() < 0.3) {
+						if (Math.random() < GAME_OPTIONS.heart.chance) {
 							this.addHeart(message);
 						} else {
 							this.addCoin(message);
@@ -1051,17 +1048,6 @@ class Game {
 				break;
 			case "bossEnemyDestroyed":
 				this.updateScores(message);
-				// if (message.isBonus) {
-				// 	if (this.gameScore.lives < 3) {
-				// 		if (Math.random() < 0.2) {
-				// 			this.addHeart(message);
-				// 		} else {
-				// 			this.addCoin(message);
-				// 		}
-				// 	} else {
-				// 		this.addCoin(message);
-				// 	}
-				// }
 				this.addExplosionShip(message);
 				break;
 			case "playerShipDestroyed":

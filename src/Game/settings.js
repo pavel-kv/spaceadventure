@@ -158,7 +158,7 @@ export const GAME_ASSETS = {
 			offsetHeight: 368,
 			animate: true,
 			once: false,
-			speedAnimation: 240,
+			speedAnimation: 60,
 			firstFrame: 0,
 			lastFrame: 13,
 			startFrame: 0,
@@ -192,7 +192,7 @@ export const GAME_ASSETS = {
 			offsetHeight: 296,
 			animate: true,
 			once: false,
-			speedAnimation: 240,
+			speedAnimation: 60,
 			firstFrame: 0,
 			lastFrame: 7,
 			startFrame: 0,
@@ -478,6 +478,7 @@ export const GAME_OPTIONS = {
 		damage: 0,
 		score: 0,
 		bonusLives: 1,
+		chance: 0.3,
 	},
 	bossEnemy: {
 		lives: 1,
@@ -505,13 +506,13 @@ export const GAME_OPTIONS = {
 			maxSpeedY: 0.5,
 		},
 		asteroid: {
-			maxCount: 3,
+			maxCount: 5,
 			maxPosY: -20,
 			minPosY: -100,
 			minSpeedX: 0,
-			maxSpeedX: 1,
+			maxSpeedX: 2,
 			minSpeedY: 0.5,
-			maxSpeedY: 2,
+			maxSpeedY: 3,
 		},
 	}
 }
