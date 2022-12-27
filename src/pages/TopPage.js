@@ -1,6 +1,6 @@
 const TopPage = {
 	id: "toplist",
-	title: "Space Shooter Adventure - Top",
+	title: "Space Shooter Adventure - Top Ten",
 	render: (className = "container") => {
 		return `
 					<section class="${className}">
