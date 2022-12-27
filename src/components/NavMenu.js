@@ -11,7 +11,7 @@ const NavMenu = {
 							</li>
 							<li>
 								<ul class="navmenu__list menu_user">
-									<li><a class="navmenu__link link_hide" id="signinUserName"></a></li>
+									<li><a class="navmenu__link link_hide" id="signinUserName" href="#user"></a></li>
 									<li><a class="navmenu__link link_hide" id="signOut">SignOut</a></li>
 								</ul>
 							</li>
