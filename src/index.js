@@ -403,7 +403,7 @@ const gameSPA = (function () {
 		this.readableDate = function (_milliseconds) {
 			const date = new Date(_milliseconds);
 			const year = date.getFullYear().toString();
-			const month = date.getMonth().toString().padStart(2, "0");
+			const month = (date.getMonth() + 1).toString().padStart(2, "0");
 			const day = date.getDate().toString().padStart(2, "0");
 			return `${day}.${month}.${year}`;
 		}
