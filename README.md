@@ -1,4 +1,4 @@
-# spaceadventure
+# Space Adventure Game Project
 Space Adventure Game Project (Shooter)
 The game "Space Adventures" a variation of the space shooter.
 
