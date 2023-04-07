@@ -9,3 +9,5 @@ Each time the user hit one of them the score goes up.
 This is a Single-Page Application. The game made using MVC technology. Google Firebase is used to store user game results.
 Object-oriented modeling techniques were used as a tool, resulting in a more efficient design process. 
 Object-oriented design within the game is allowed for efficient and easy extension or upgrades to a game.
+
+https://pavel-kv.github.io/spaceadventure/
